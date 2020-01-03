@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<litepal>
+    <dbname value="TWord"></dbname>
+    <version value="7"></version>
+
+    <list>
+        <mapping class="litepal.MainMessageDB"></mapping>
+        <mapping class="litepal.MessageContentDB"></mapping>
+    </list>
+</litepal>
