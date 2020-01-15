@@ -10,8 +10,6 @@ import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.os.IBinder;
-import android.support.annotation.RequiresApi;
-import android.support.v7.app.NotificationCompat;
 import android.util.Log;
 
 public class MyService extends Service {
@@ -24,7 +22,6 @@ public class MyService extends Service {
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
-    @RequiresApi(api = 26)
     @Override
     public void onCreate() {
         super.onCreate();
@@ -59,19 +56,6 @@ public class MyService extends Service {
 
         }else {
 
-            NotificationCompat.Builder notificationBuilder = (NotificationCompat.Builder) new NotificationCompat.Builder(this)
-
-                    .setContentTitle(getResources().getString(R.string.app_name))
-
-                    .setPriority(Notification.PRIORITY_DEFAULT)// 设置该通知优先级
-
-                    .setAutoCancel(false)// 设置这个标志当用户单击面板就可以让通知将自动取消
-
-                    .setOngoing(true)// true，设置他为一个正在进行的通知。他们通常是用来表示一个后台任务,用户积极参与(如播放音乐)或以某种方式正在等待,因此占用设备(如一个文件下载,同步操作,主动网络连接)
-
-                    .setSmallIcon(R.mipmap.ic_launcher);
-
-            notification = notificationBuilder.build();
 
         }
 

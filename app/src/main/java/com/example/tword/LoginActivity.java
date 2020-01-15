@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Build;
-import android.support.annotation.RequiresApi;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -18,6 +17,9 @@ import org.litepal.crud.DataSupport;
 
 import litepal.MainMessageDB;
 import litepal.MessageContentDB;
+import litepal.MsgMemberDB;
+import litepal.SatffDB;
+import litepal.departmentDB;
 import materialdesignutil.StatusBarUtil;
 import message.MyMessage;
 import nio.NioSocketChannel;
@@ -29,6 +31,7 @@ public class LoginActivity extends BaseActivity {
     private EditText loginName,password;
     private TextView loginButton;
     private GetLoginReceiver loginReceiver;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,6 +77,9 @@ public class LoginActivity extends BaseActivity {
            if(loginName.getText().toString().equals("deleteDB")) {
                DataSupport.deleteAll(MainMessageDB.class);
                DataSupport.deleteAll(MessageContentDB.class);
+               DataSupport.deleteAll(SatffDB.class);
+               DataSupport.deleteAll(departmentDB.class);
+               DataSupport.deleteAll(MsgMemberDB.class);
            }else{
                new Thread(new Runnable() {
                    @Override
@@ -98,6 +104,12 @@ public class LoginActivity extends BaseActivity {
         Intent startIntent = new Intent(this,GetMessageService.class);
         startService(startIntent);
     }
+
+    private void startHeartbeatService(){
+        Intent intent = new Intent(this,HeartbeatService.class);
+        startService(intent);
+    }
+
     private void toast(){
         Toast.makeText(LoginActivity.this,"登录失败",Toast.LENGTH_SHORT).show();
     }
@@ -114,7 +126,6 @@ public class LoginActivity extends BaseActivity {
 
     class GetLoginReceiver extends BroadcastReceiver{
 
-        @RequiresApi(api = Build.VERSION_CODES.N)
         @Override
         public void onReceive(Context context, Intent intent) {
               MyMessage message = (MyMessage) intent.getSerializableExtra("login");
@@ -128,7 +139,12 @@ public class LoginActivity extends BaseActivity {
 
                   User.getINSTANCE().setUserId(message.getReceivers()[0]);
                   User.getINSTANCE().setUserName(message.getUserName());
-                  Log.d("用户名 ：" + User.getINSTANCE().getUserName(), "  ID ：" + User.getINSTANCE().getUserId());
+                  User.getINSTANCE().setLoginName(loginName.getText().toString());
+                  User.getINSTANCE().setPasswrd(password.getText().toString());
+
+//                  startHeartbeatService();
+
+//                  Log.d("用户名 ：" + User.getINSTANCE().getUserName(), "  ID ：" + User.getINSTANCE().getUserId());
 
                   Intent it = new Intent(LoginActivity.this, TWordMainActivity.class);
                   it.putExtra("message",message);

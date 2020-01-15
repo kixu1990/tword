@@ -2,7 +2,9 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
-        android:id="@+id/bar_text"/>
-
+        android:id="@+id/content_show_member"
+        android:icon="@drawable/add_128_128"
+        android:title="群组成员"
+        app:showAsAction="always"/>
 
 </menu>

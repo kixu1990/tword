@@ -3,6 +3,9 @@ package nio;
 import android.util.Log;
 
 import com.example.tword.ServerInfo;
+import com.example.tword.User;
+
+import org.litepal.crud.DataSupport;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -10,7 +13,11 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.HashMap;
+import java.util.List;
 
+import litepal.SatffDB;
+import litepal.departmentDB;
 import message.MyMessage;
 
 /**
@@ -20,7 +27,7 @@ import message.MyMessage;
 public class NioSocketChannel{
 
     private SocketChannel socketChannel;
-    private ByteBuffer byteBuffer = ByteBuffer.allocate(4096);
+    private ByteBuffer byteBuffer = ByteBuffer.allocate(1024 * 10000);
     private  SocketAddress socketAddress = new InetSocketAddress(ServerInfo.SERVER_IP,ServerInfo.PORT);
     private Selector selector = null;
 
@@ -58,16 +65,34 @@ public class NioSocketChannel{
 
     public Boolean login(String loginName, String password){
         Boolean b = false;
+        List<SatffDB> satffs = DataSupport.select("*")//.where("userId = ?",String.valueOf(User.getINSTANCE().getUserId()))
+                                          .find(SatffDB.class);
+        HashMap<Integer,Integer> version = new HashMap<>();
+        for(SatffDB satff : satffs){
+            version.put(satff.getSatffId(),satff.getVersion());
+ //           Log.d("发送的用户信息",satff.getSatffId()+" : "+satff.getVersion());
+        }
+        List<departmentDB> departments = DataSupport.select("*")//.where("userId = ?",String.valueOf(User.getINSTANCE().getUserId()))
+                                                    .find(departmentDB.class);
+        HashMap<String,Integer> departmentVersion = new HashMap<>();
+        for(departmentDB department: departments){
+            departmentVersion.put(department.getDepartmentName(),department.getVersion());
+//            Log.d("发送的部门信息",department.getDepartmentName()+" : "+department.getVersion());
+        }
+
+ //       Log.d("数据库读出的数量",satffs.size()+" : "+departments.size());
         MyMessage message = new MyMessage(0,new int[]{0},"login");
         message.setLoginName(loginName);
         message.setLoginPassword(password);
+        message.setObjects(new Object[]{version,departmentVersion});
         byte[] messageBytes = ObjectFlidByte.objectToByteArray(message);
         try {
             SocketChannel socketChannel = SocketChannel.open();
             socketChannel.connect(socketAddress);
             this.socketChannel = socketChannel;
-            Log.d("NioSocketChannel",socketChannel.toString());
+//            Log.d("NioSocketChannel",socketChannel.toString());
             byteBuffer.clear();
+            byteBuffer.put(IntFlidByte.getHeadByte(messageBytes.length));
             byteBuffer.put(messageBytes);
             byteBuffer.flip();
 
@@ -86,11 +111,13 @@ public class NioSocketChannel{
             public void run() {
                 byte[] messageBytes = ObjectFlidByte.objectToByteArray(message);
                 byteBuffer.clear();
+                byteBuffer.put(IntFlidByte.getHeadByte(messageBytes.length));
                 byteBuffer.put(messageBytes);
-
+                int i = messageBytes.length;
                 byteBuffer.flip();
                 try {
                     socketChannel.write(byteBuffer);
+                    Log.d("发送消息成功","长度 "+String.valueOf(i));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

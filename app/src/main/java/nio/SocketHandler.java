@@ -1,8 +1,9 @@
 package nio;
 
 import android.os.Build;
-import android.support.annotation.RequiresApi;
 import android.util.Log;
+
+import androidx.annotation.RequiresApi;
 
 import com.example.tword.GetMessageService;
 

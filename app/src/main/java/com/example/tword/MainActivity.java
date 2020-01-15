@@ -5,23 +5,28 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Color;
-import android.os.Message;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.widget.CardView;
-import android.support.v7.widget.GridLayoutManager;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.widget.Toolbar;
+import androidx.cardview.widget.CardView;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
+import com.google.android.flexbox.FlexboxLayout;
 
 import org.litepal.crud.DataSupport;
 
@@ -31,7 +36,11 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
+import de.hdodenhof.circleimageview.CircleImageView;
+import litepal.MainMessageDB;
 import litepal.MessageContentDB;
+import litepal.MsgMemberDB;
+import litepal.SatffDB;
 import materialdesignutil.StatusBarUtil;
 import message.MyMessage;
 import mutils.GetTopActivity;
@@ -50,9 +59,12 @@ public class MainActivity extends BaseActivity{
     private long messageId;
     private String messageHeard;
     private TextView toolbarTV;
+    private FlexboxLayout heardFBL;
+    private CircleImageView leftCIV,rightCIV;
 
     private IntentFilter intentFilter;
     private GetMessageReceiver getMessageReceiver;
+    private List<MainMessageDB>  mainMessages;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,29 +84,21 @@ public class MainActivity extends BaseActivity{
         Toolbar toolbar = (Toolbar) findViewById(R.id.content_toolbar);
         setSupportActionBar(toolbar);
 
-        final Intent intent = getIntent();
-        messageId = intent.getLongExtra("messageId",0);
-        messageHeard = intent.getStringExtra("messageHeard");
-
         inputText = (EditText)findViewById(R.id.input_text);
         contentAdd = (ImageView)findViewById(R.id.content_add_iv);
         contentSend = (CardView)findViewById(R.id.content_send);
+        heardFBL = (FlexboxLayout)findViewById(R.id.content_FBL);
+        leftCIV = (CircleImageView)findViewById(R.id.left_image_CIV);
+        rightCIV = (CircleImageView)findViewById(R.id.right_image_CIV);
         toolbarTV = (TextView)findViewById(R.id.toolbar_tv);
-        toolbarTV.setText(messageHeard);
         msgRecyclerView = (RecyclerView)findViewById(R.id.recycler_view);
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
-
-        intentFilter = new IntentFilter();
-        intentFilter.addAction("com.example.tword.GETCONTENT_BROADCAST");
-        getMessageReceiver = new GetMessageReceiver();
-        registerReceiver(getMessageReceiver,intentFilter);
 
         final User user = User.getINSTANCE();
 //        Msg msg = new Msg(">>>我是："+user.getUserName()+"<<<",Msg.TYPE_SENT);
 //        msgList.add(msg);
 //        Msg msg1 = new Msg("测试显示 ！！！",Msg.TYPE_RECEIVED);
 //        msgList.add(msg1);
-        msgInit();
 
         msgRecyclerView.setLayoutManager(layoutManager);
         adapter = new MsgAdapter(msgList);
@@ -144,10 +148,56 @@ public class MainActivity extends BaseActivity{
     }
 
     @Override
+    protected void onPostResume() {
+        super.onPostResume();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.toolbar,menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        switch (item.getItemId()){
+            case R.id.content_show_member :
+                if(heardFBL.getVisibility() == View.GONE){
+                    heardFBL.setVisibility(View.VISIBLE);
+                }else {
+                    heardFBL.setVisibility(View.GONE);
+                }
+        }
+        return true;
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
+
+
+        intentFilter = new IntentFilter();
+        intentFilter.addAction("com.example.tword.GETCONTENT_BROADCAST");
+        getMessageReceiver = new GetMessageReceiver();
+        registerReceiver(getMessageReceiver,intentFilter);
+
  //       Log.d("MainActivity","onResume :"+getClass().getName());
         GetTopActivity.getINSTANCE().setTopActivity(getClass().getName());
+
+        Intent intent = getIntent();
+        messageId = intent.getLongExtra("messageId",0);
+//        messageHeard = intent.getStringExtra("messageHeard");
+//        Log.d("接收到广播的消息名",String.valueOf(messageId));
+        mainMessages = DataSupport.select("*")
+                .where("messageId = ? and userId = ?",String.valueOf(messageId),String.valueOf(User.getINSTANCE().userId))
+                .find(MainMessageDB.class);
+        String title = intent.getStringExtra("messageHeard");
+//       Log.d("数据库提取的成员组",String.valueOf(mainMessages.get(0).getMembers())+mainMessages.get(0).getMessageId()+mainMessages.get(0).getHeadlin());
+        toolbarTV.setText(title);
+        msgInit();
+        heardImageInit();
+        adapter.notifyItemInserted(msgList.size() - 1);
+        msgRecyclerView.scrollToPosition(msgList.size() - 1);
     }
 
     @Override
@@ -157,12 +207,38 @@ public class MainActivity extends BaseActivity{
         GetTopActivity.getINSTANCE().setTopActivity(" ");
     }
 
+    private void heardImageInit(){
+
+        List<SatffDB> satffs = DataSupport.select("*")
+                .where("userId = ?",String.valueOf(User.getINSTANCE().getUserId()))
+                .find(SatffDB.class);
+
+        List<MsgMemberDB> msgMembers = DataSupport.select("*")
+                                                  .where("messageId = ?",String.valueOf(messageId))
+                                                  .find(MsgMemberDB.class);
+        for(MsgMemberDB members : msgMembers){
+            CircleImageView imageView = new CircleImageView(this);
+            byte[] src = null;
+            for(SatffDB satff :satffs){
+                if(members.getMembers() == satff.getSatffId()){
+                    src = satff.getUserImage();
+                }
+            }
+            RequestOptions options = new RequestOptions().override(65,65).centerCrop();
+            Glide.with(this).load(src).apply(options).into(imageView);
+            heardFBL.addView(imageView);
+        }
+    }
+
     private void msgInit(){
         String userId = String.valueOf( User.getINSTANCE().getUserId());
 
         List<MessageContentDB> contents = DataSupport.select("*")
                                           .where("userId = ? and msgId = ?",userId,String.valueOf(messageId))
                                           .find(MessageContentDB.class);
+        List<SatffDB> satffs = DataSupport.select("*")
+//                                          .where("userId = ?",userId)
+                                          .find(SatffDB.class);
 
         for(MessageContentDB content:contents){
             int type;
@@ -171,7 +247,13 @@ public class MainActivity extends BaseActivity{
             } else {
                 type = Msg.TYPE_RECEIVED;
             }
-            Msg msg = new Msg(content.getStringContent(), type);
+            byte[] src = null;
+            for(SatffDB satff :satffs){
+                if(content.getSender() == satff.getSatffId()){
+                    src = satff.getUserImage();
+                }
+            }
+            Msg msg = new Msg(content.getStringContent(), type,src);
 //            Log.d("getStringContent",String.valueOf(content.getStringContent()));
             msgList.add(msg);
         }
@@ -185,15 +267,23 @@ public class MainActivity extends BaseActivity{
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    protected void onStop() {
+        super.onStop();
         unregisterReceiver(getMessageReceiver);
     }
+
+//    @Override
+//    protected void onDestroy() {
+//        super.onDestroy();
+//        unregisterReceiver(getMessageReceiver);
+//    }
 
     class GetMessageReceiver extends BroadcastReceiver{
         @Override
         public void onReceive(Context context, Intent intent) {
             MyMessage message = (MyMessage) intent.getSerializableExtra("message");
+            messageId = message.getMessageId();
+ //           Log.d("触发广播的ID ",String.valueOf(messageId));
             if(message.getMessageId() == messageId) {
 
                 int type;
@@ -202,10 +292,21 @@ public class MainActivity extends BaseActivity{
                 } else {
                     type = Msg.TYPE_RECEIVED;
                 }
-                Msg msg = new Msg(message.getStringContent(), type);
+                List<SatffDB> satffs = DataSupport.select("*")
+//                                                  .where("userId = ?",String.valueOf(User.getINSTANCE().getUserId()))
+                                                  .find(SatffDB.class);
+                byte[] src = null;
+                for(SatffDB satff : satffs){
+                    if (message.getSender() == satff.getSatffId()){
+                        src = satff.getUserImage();
+                    }
+                }
+                Msg msg = new Msg(message.getStringContent(), type,src);
                 msgList.add(msg);
                 adapter.notifyItemInserted(msgList.size() - 1);
                 msgRecyclerView.scrollToPosition(msgList.size() - 1);
+
+                abortBroadcast();
             }
         }
     }

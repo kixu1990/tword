@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:layout_width="match_parent"
     android:orientation="vertical">
-    <android.support.v7.widget.CardView
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:cardCornerRadius="4dp"
@@ -20,7 +20,7 @@
             android:layout_alignParentEnd="true"
             app:use_type="use_padding_top"
             android:orientation="vertical" >
-            <android.support.v7.widget.Toolbar
+            <androidx.appcompat.widget.Toolbar
                 android:id="@+id/add_message_toolbar"
                 android:layout_width="match_parent"
                 android:layout_height="36dp"
@@ -34,16 +34,16 @@
                     android:layout_gravity="center"
                     android:textColor="#000"
                     android:text="新建消息"/>
-            </android.support.v7.widget.Toolbar>
+            </androidx.appcompat.widget.Toolbar>
         </materialdesignutil.StatusBarHeightView>
     </LinearLayout>
-    </android.support.v7.widget.CardView>
+    </androidx.cardview.widget.CardView>
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="vertical">
-    <android.support.v7.widget.CardView
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:cardCornerRadius="4dp"
@@ -89,9 +89,9 @@
                 app:flexWrap="wrap"
                 app:justifyContent="space_around"></com.google.android.flexbox.FlexboxLayout>
         </LinearLayout>
-    </android.support.v7.widget.CardView>
+    </androidx.cardview.widget.CardView>
 
-    <android.support.v7.widget.CardView
+    <androidx.cardview.widget.CardView
         android:id="@+id/lot_num_cardview"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -138,9 +138,9 @@
             app:justifyContent="space_around"
             android:visibility="gone"></com.google.android.flexbox.FlexboxLayout>
     </LinearLayout>
-    </android.support.v7.widget.CardView>
+    </androidx.cardview.widget.CardView>
 
-    <android.support.v7.widget.CardView
+    <androidx.cardview.widget.CardView
     android:id="@+id/porblem_cardview"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -187,9 +187,9 @@
             app:justifyContent="space_around"
             android:visibility="gone"></com.google.android.flexbox.FlexboxLayout>
     </LinearLayout>
-</android.support.v7.widget.CardView>
+</androidx.cardview.widget.CardView>
 
-    <android.support.v7.widget.CardView
+    <androidx.cardview.widget.CardView
         android:id="@+id/headline_cardview"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -229,9 +229,9 @@
 
         </LinearLayout>
 
-    </android.support.v7.widget.CardView>
+    </androidx.cardview.widget.CardView>
 
-    <android.support.v7.widget.CardView
+    <androidx.cardview.widget.CardView
         android:id="@+id/member_cardview"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -261,16 +261,24 @@
                     android:textColor="#000"
                     android:textSize="16sp"
                     android:layout_marginLeft="15dp"
-                    android:gravity="start"/>
+                    android:gravity="start"
+                    android:visibility="gone"/>
+                <com.google.android.flexbox.FlexboxLayout
+                    android:id="@+id/image_FBL"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="8dp"
+                    app:flexWrap="wrap">
+                </com.google.android.flexbox.FlexboxLayout>
             </LinearLayout>
             <ExpandableListView
                 android:id="@+id/member_expandablelistview"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"></ExpandableListView>
         </LinearLayout>
-    </android.support.v7.widget.CardView>
+    </androidx.cardview.widget.CardView>
     </LinearLayout>
-    <android.support.v7.widget.CardView
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="25dp"
@@ -287,5 +295,5 @@
             android:gravity="center"
             android:textColor="#fff"
             android:textSize="18dp"/>
-    </android.support.v7.widget.CardView>
+    </androidx.cardview.widget.CardView>
 </LinearLayout>

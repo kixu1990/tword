@@ -6,36 +6,35 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.os.IBinder;
-import android.support.annotation.RequiresApi;
-import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+
+import androidx.core.app.NotificationCompat;
 
 import org.litepal.crud.DataSupport;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
-import java.util.logging.SocketHandler;
-
-import fmtadapter.MainMessage;
 import litepal.MainMessageDB;
 import litepal.MessageContentDB;
+import litepal.MsgMemberDB;
+import litepal.SatffDB;
+import litepal.departmentDB;
 import message.MyMessage;
 import mutils.GetTopActivity;
+import litepal.MainMessageDB;
 import nio.IntFlidByte;
 import nio.NioSocketChannel;
 import nio.ObjectFlidByte;
@@ -44,7 +43,7 @@ public class GetMessageService extends Service {
 
     private static final int PORT = 11002;
 
-    private ByteBuffer cacheBuffer = ByteBuffer.allocate(1024 * 100);
+    private ByteBuffer cacheBuffer = ByteBuffer.allocate(1024 * 10000);
     private boolean cache = false;
     int bodyLen = -1;
     int cacheBufferLen = -1;
@@ -58,7 +57,6 @@ public class GetMessageService extends Service {
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void onCreate() {
         super.onCreate();
@@ -125,7 +123,6 @@ public class GetMessageService extends Service {
 //        }).start();
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.N)
     public void handleRead(SelectionKey selectionKey) throws IOException {
         int head_length = 4;
         byte[] headByte = new byte[4];
@@ -139,31 +136,10 @@ public class GetMessageService extends Service {
             cacheBuffer.flip();
             byteBuffer.put(cacheBuffer);
         }
-
-
-
         int count = socketChannel.read(byteBuffer);
         if(count > 0) {
             byteBuffer.flip();
             Log.d("ByteBuffer原始数量：", "--------------------------------------------" + String.valueOf(byteBuffer.remaining()));
-//        if(cache){
-//            cacheBuffer.flip();
-//            int off = cacheBuffer.remaining();
-//            int end = bodyLen - off;
-//            byte[] rsBody = new byte[bodyLen];
-//            cacheBuffer.get(rsBody,0,off );
-//            Log.d("rsBody的总长度：",String.valueOf(rsBody.length));
-//            byteBuffer.get(rsBody,off,end);
-//            message = (MyMessage) ObjectFlidByte.byteArrayToObject(rsBody);
-//            Log.d("消息头：",message.getHeader());
-//            unbindHeadr(message,null);
-//            byteBuffer.mark();
-//            bodyLen = -1;
-//            cacheBufferLen = -1;
-//            byteBuffer.put(cacheBuffer);
-//            cache =false;
-//        }
-//        Log.d("ByteBuffer去除上次消息体后数量：","--------------------------------------------"+String.valueOf(byteBuffer.remaining()));
             int position = 0;
             int i = 0;
             while (byteBuffer.remaining() > 0) {
@@ -211,19 +187,6 @@ public class GetMessageService extends Service {
         } else if(count == -1){
             socketChannel.close();
         }
-
-
-
-//        if(count > 0){
-//            message = (MyMessage) ObjectFlidByte.byteArrayToObject(byteBuffer.array());
-//            Log.d("收到信息：",message.getHeader());
-//            socketChannel.register(selectionKey.selector(), SelectionKey.OP_READ, byteBuffer);
-//        }else  if(count == -1){
-//            socketChannel.close();
-//        }
-//        if(message != null){
-//            unbindHeadr(message,null);
-//        }
     }
 
     private void unbindHeadr(MyMessage message,InetAddress inetAddress){
@@ -239,6 +202,7 @@ public class GetMessageService extends Service {
 
         switch (message.getHeader()){
             case ("login"): sendLoginBroadcast(message);
+                            resSatffList(message);
                 break;
             case ("createMessage"): sendMainMessageBroadcast(message);
                                       insertMainMessage(message);
@@ -252,24 +216,76 @@ public class GetMessageService extends Service {
         }
     }
 
+    private void resSatffList(MyMessage message){
+        ArrayList<Object[]> departments = (ArrayList<Object[]>) message.getObjects()[0];
+        ArrayList<Object[]> users = (ArrayList<Object[]>) message.getObjects()[1];
+
+        Log.d("接收到的部门数量",String.valueOf(departments.size())+"   接收到的用户数量"+String.valueOf(users.size()));
+
+        List<departmentDB> departmentDBS = DataSupport.select("*").where("userId = ?",String.valueOf(User.getINSTANCE().getUserId()))
+                                                                             .find(departmentDB.class);
+        for(int i=0; i<departments.size();i++){
+            for(departmentDB departmentDB : departmentDBS){
+                if(departmentDB.getDepartmentName().equals((String)(departments.get(i)[0]))){
+                    DataSupport.deleteAll(departmentDB.class,"departmentName = ? and userId = ?",departmentDB.getDepartmentName(),String.valueOf(User.getINSTANCE().getUserId()));
+                }
+            }
+            departmentDB db = new departmentDB();
+            db.setDepartmentName((String)departments.get(i)[0]);
+            db.setDepartmentManager((String)departments.get(i)[1]);
+            db.setVersion((int)departments.get(i)[2]);
+            db.setUserId(User.getINSTANCE().getUserId());
+            db.save();
+//           Log.d("写入数据库","添加部门信息！"+db.getDepartmentName());
+        }
+
+        List<SatffDB> satffDBS = DataSupport.select("*").where("userId = ?",String.valueOf(User.getINSTANCE().getUserId()))
+                                                                   .find(SatffDB.class);
+        for(int i=0; i<users.size(); i++){
+            for(SatffDB satff : satffDBS){
+                if(satff.getSatffId() == (int)users.get(i)[0]){
+                    DataSupport.deleteAll(SatffDB.class,"satffId = ? and userId = ?",String.valueOf(satff.getSatffId()),String.valueOf(User.getINSTANCE().getUserId()));
+                }
+            }
+            SatffDB satffDB = new SatffDB();
+            satffDB.setSatffId((int)users.get(i)[0]);
+            satffDB.setSatffName((String)users.get(i)[1]);
+            satffDB.setDepartment((String)users.get(i)[2]);
+            satffDB.setUserImage((byte[])users.get(i)[3]);
+            satffDB.setVersion((int)users.get(i)[4]);
+            satffDB.setPost((String)users.get(i)[5]);
+            satffDB.setEmail((String)users.get(i)[6]);
+            satffDB.setPhoneNumber((String)users.get(i)[7]);
+            satffDB.setState((String)users.get(i)[8]);
+            satffDB.setUserId(User.getINSTANCE().getUserId());
+            satffDB.save();
+//           Log.d("写入数据库","添加用户信息！"+satffDB.getSatffName());
+        }
+    }
+
     private void sendNotification(MyMessage message){
         String topActivityName = GetTopActivity.getINSTANCE().getTopActivity();
-        Log.d("通知",topActivityName +": "+MainActivity.class.getName()+": "+TWordMainActivity.class.getName());
+ //       Log.d("通知",topActivityName +": "+MainActivity.class.getName()+": "+TWordMainActivity.class.getName());
         if(topActivityName.equals(MainActivity.class.getName()) || topActivityName.equals(TWordMainActivity.class.getName())){
-            Log.d("通知",topActivityName +": "+MainActivity.class.getName());
+ //           Log.d("通知",topActivityName +": "+MainActivity.class.getName());
 
         }else {
-            Intent intent = new Intent(this,MainActivity.class);
-            intent.putExtra("messageId",message.getMessageId());
-            intent.putExtra("messageHeard",message.getHeader());
+            List<MainMessageDB>  mainMessages = DataSupport.select("*")
+                    .where("messageId = ? and userId = ?",String.valueOf(message.getMessageId()),String.valueOf(User.getINSTANCE().userId))
+                    .find(MainMessageDB.class);
+            String title = mainMessages.get(0).getHeadlin();
+            Intent intent = new Intent(this,TWordMainActivity.class);
+//            intent.putExtra("messageId",message.getMessageId());
+//            intent.putExtra("messageHeard",title);//
+//                Log.d("发送的",String.valueOf(message.getMessageId())+" : "+title);
             PendingIntent pi = PendingIntent.getActivity(this,0,intent,0);
-            notification(pi,message.getHeader(),message.getStringContent(),15,NotificationCompat.PRIORITY_MAX);
+            notification(pi,title,message.getStringContent(),15,NotificationCompat.PRIORITY_MAX);
         }
     }
 
     private void notification (PendingIntent pi,String title,String contentText,int id,int priority){
         NotificationManager manager = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
-        Notification notification = new NotificationCompat.Builder(this)
+        Notification notification = new NotificationCompat.Builder(this,"tword")
                 .setContentTitle(title)
                 .setContentText(contentText)
                 .setWhen(System.currentTimeMillis())
@@ -277,11 +293,11 @@ public class GetMessageService extends Service {
                 .setLargeIcon(BitmapFactory.decodeResource(getResources(),R.mipmap.ic_launcher))
                 .setContentIntent(pi)
                 .setAutoCancel(true)
- //               .setDefaults(NotificationCompat.DEFAULT_ALL)
- //               .setPriority(priority)
+//                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setPriority(priority)
                 .build();
         manager.notify(id,notification);
-        Log.d("通知","进入发送方法");
+ //       Log.d("通知","进入发送方法");
     }
 
     @TargetApi(26)
@@ -298,7 +314,13 @@ public class GetMessageService extends Service {
         mm.setUserId(User.getINSTANCE().getUserId());
         mm.setDate(new Date(message.getDate().getTime()));
         mm.save();
-        Log.d("添加数据库",mm.getHeadlin() +": "+User.getINSTANCE().getUserId());
+//        Log.d("添加数据库",mm.getHeadlin() +": "+User.getINSTANCE().getUserId());
+        for(int i : message.getReceivers()){
+            MsgMemberDB msgMember = new MsgMemberDB();
+            msgMember.setMessageId(message.getMessageId());
+            msgMember.setMembers(i);
+            msgMember.save();
+        }
     }
     private void insertMessageContent(MyMessage message){
         MessageContentDB mc = new MessageContentDB();
@@ -362,9 +384,15 @@ public class GetMessageService extends Service {
     }
 
     private void sendContentBroadcast(MyMessage message){
+//        List<MainMessageDB> mainMessages = DataSupport.select("*")
+//                                                      .where("userId = ? and messageId = ?",String.valueOf(User.getINSTANCE().getUserId()),String.valueOf(message.getMessageId()))
+//                                                      .find(MainMessageDB.class);
+//        if(mainMessages.size() == 0){
+//            MyMessage mainMessage = new MyMessage(0, new int[]{User.getINSTANCE().getUserId()}, "createMessage");
+//        }
         Intent intent = new Intent("com.example.tword.GETCONTENT_BROADCAST");
         intent.putExtra("message",message);
-        sendBroadcast(intent);
+        sendOrderedBroadcast(intent,null);
     }
 
     private void sendLoginBroadcast(MyMessage message){

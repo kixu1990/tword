@@ -1,7 +1,7 @@
 package com.example.tword;
 
 /**
- * Created by Administrator on 2019/9/7.
+ * Created by kixu on 2019/9/7.
  */
 
 public class Msg {
@@ -9,12 +9,17 @@ public class Msg {
     public static final int TYPE_SENT = 1;
     private String content;
     private int type;
+    private byte[] imageSrc;
 
-    public Msg(String content, int type){
+    public Msg(String content, int type, byte[] imageSrc){
         this.content = content;
         this.type = type;
+        this.imageSrc = imageSrc;
     }
 
+    public byte[] getImageSrc(){
+        return  imageSrc;
+    }
     public String getContent(){
         return content;
     }

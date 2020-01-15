@@ -4,9 +4,18 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:padding="3dp">
-
     <LinearLayout
         android:id="@+id/left_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="left">
+        <de.hdodenhof.circleimageview.CircleImageView
+            android:id="@+id/left_image_CIV"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_centerInParent="true"
+            android:layout_gravity="center"/>
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="left"
@@ -18,9 +27,14 @@
             android:textColor="#111"
             android:layout_gravity="center" />
     </LinearLayout>
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/right_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="right">
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="right"
@@ -31,6 +45,13 @@
             android:layout_height="wrap_content"
             android:textColor="#111"
             android:layout_gravity="center" />
+    </LinearLayout>
+        <de.hdodenhof.circleimageview.CircleImageView
+            android:id="@+id/right_image_CIV"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_centerInParent="true"
+            android:layout_gravity="center"/>
     </LinearLayout>
 
 </LinearLayout>

@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.support.v7.widget.CardView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -21,15 +20,26 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.cardview.widget.CardView;
+
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.google.android.flexbox.FlexboxLayout;
+
+import org.litepal.crud.DataSupport;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import de.hdodenhof.circleimageview.CircleImageView;
+import litepal.SatffDB;
+import litepal.departmentDB;
 import materialdesignutil.StatusBarUtil;
 import message.MyMessage;
 import nio.NioSocketChannel;
@@ -46,10 +56,11 @@ public class AddMessage extends BaseActivity {
 //            {"孙悟空","唐三藏","猪八戒","沙和尚"}
 //    };
     private  HashMap<Integer,String> userNameMap;
+    private  HashMap<Integer,byte[]> userImageMap;
 
     private String[] lotNum = new String[]{"sp1120","jw0125","sp1125","sp0136","jw0214","sp365","jw0125","sp1125","sp0136","jw0125","sp1125","sp0136"};
  //   private String[] lotNum = new String[]{"sp1120","jw0125","sp1125","sp1120","jw0125","sp1125","sp1120","jw0125","sp1125","sp1120","jw0125","sp1125","sp1120","jw0125","sp1125","sp1120","jw0125","sp1125","sp1120","jw0125","sp1125"};
-    private FlexboxLayout flexboxLayout,lableFlexboxLayout,problemFlexboxLayout;
+    private FlexboxLayout flexboxLayout,lableFlexboxLayout,problemFlexboxLayout,imageLayout;
     private TextView reportTextView,topLableTextView,memberTextView;
     private LinearLayout topLableLinearlayout,lableLinearlayout,lotNumLinearLayout;
     private CardView lotNumcardView,problemCardView,headlineCardView;
@@ -89,12 +100,50 @@ public class AddMessage extends BaseActivity {
         headlineCardView = (CardView)findViewById(R.id.headline_cardview);
         headlineEditText = (EditText)findViewById(R.id.headline_edit_text);
         createMessageButton = (TextView)findViewById(R.id.create_message_but);
+        imageLayout = (FlexboxLayout) findViewById(R.id.image_FBL);
 
-        Intent intent = getIntent();
-        MyMessage rsMessage = (MyMessage) intent.getSerializableExtra("rsMessage");
-        groupData = (String[]) rsMessage.getObjects()[0];
-        childrenData = (int[][]) rsMessage.getObjects()[1];
-        userNameMap = (HashMap<Integer, String>) rsMessage.getObjects()[2];
+//        Intent intent = getIntent();
+//        MyMessage rsMessage = (MyMessage) intent.getSerializableExtra("rsMessage");
+//        groupData = (String[]) rsMessage.getObjects()[0];
+//        childrenData = (int[][]) rsMessage.getObjects()[1];
+//        userNameMap = (HashMap<Integer, String>) rsMessage.getObjects()[2];
+//        userImageMap = (HashMap<Integer, byte[]>) rsMessage.getObjects()[3];
+
+        List<departmentDB> departmentDBs = DataSupport.select("*").where("userId = ?",String.valueOf(User.getINSTANCE().getUserId()))
+                                                                              .find(departmentDB.class);
+        List<SatffDB> satffDBS = DataSupport.select("*").where("userId = ?",String.valueOf(User.getINSTANCE().getUserId()))
+                                                                   .find(SatffDB.class);
+        userImageMap = new HashMap<>();
+        userNameMap = new HashMap<>();
+        for(int i=0; i<satffDBS.size(); i++){
+            userNameMap.put(satffDBS.get(i).getSatffId(),satffDBS.get(i).getSatffName());
+            userImageMap.put(satffDBS.get(i).getSatffId(),satffDBS.get(i).getUserImage());
+        }
+        String[] ss = new String[departmentDBs.size()];
+        for(int i=0; i<ss.length; i++){
+            ss[i] = departmentDBs.get(i).getDepartmentName();
+        }
+        groupData = ss;
+
+        int[][] children = new int[departmentDBs.size()][];
+        for(int i=0; i<departmentDBs.size(); i++){
+            ArrayList<Integer> intList = new ArrayList();
+            for(int j=0; j<satffDBS.size(); j++){
+                if(departmentDBs.get(i).getDepartmentName().equals(satffDBS.get(j).getDepartment())){
+                    if(satffDBS.get(j).getSatffId() != User.getINSTANCE().getUserId()) {
+                        intList.add(satffDBS.get(j).getSatffId());
+                    }
+                }
+            }
+            int[] is = new int[intList.size()];
+            for(int g=0; g<is.length; g++){
+                if(intList.get(g) != User.getINSTANCE().getUserId()) {
+                    is[g] = intList.get(g);
+                }
+            }
+            children[i] = is;
+        }
+        childrenData = children;
 
         intentFilter = new IntentFilter();
         intentFilter.addAction("com.example.tword.GETMAINMESSAGE_BROADCAST");
@@ -380,11 +429,16 @@ public class AddMessage extends BaseActivity {
                     for(int j=0; j<size; j++){
                         m.put(children[i][j],true);
                     }
+                    imageLayout.removeAllViews();
                     ArrayList<Integer> userId = getCheckChild();
                     for(int id:userId){
-                        memberText += (userNameMap.get(id)+" ");
+                        byte[] src1 = userImageMap.get(id);
+                        CircleImageView circleImageView = new CircleImageView(context);
+                        RequestOptions options = new RequestOptions().override(80,80).centerCrop();
+                        Glide.with(context).load(src1).apply(options).into(circleImageView);
+                        imageLayout.addView(circleImageView);
                     }
-                    memberTextView.setText(memberText.trim());
+
                     memberElv.collapseGroup(i);
                     memberElv.expandGroup(i);
                 }
@@ -404,6 +458,7 @@ public class AddMessage extends BaseActivity {
             if(view == null){
                view =  mInflater.inflate(R.layout.add_message_expand_adapter_child,null);
                 childViewHolder = new ChildViewHolder();
+                childViewHolder.userImage = (CircleImageView) view.findViewById(R.id.user_image_civ);
                 childViewHolder.childNname = (TextView)view.findViewById(R.id.name_textview);
                 childViewHolder.checkBox = (CheckBox)view.findViewById(R.id.select_checkbox);
                 view.setTag(childViewHolder);
@@ -411,6 +466,9 @@ public class AddMessage extends BaseActivity {
                 childViewHolder = (ChildViewHolder)view.getTag();
             }
             childViewHolder.childNname.setText(userNameMap.get(getChild(i,i1)));
+            final byte[] src = userImageMap.get(getChild(i,i1));
+//            Log.d("图片内容大小",String.valueOf(src == null? 0 : String.valueOf(src.length) ));
+            Glide.with(context).load(src).into(childViewHolder.userImage);
 //            Log.d("add", String.valueOf(childCheckMap.get(group[i])));
 
             boolean b1 = childCheckMap.get(group[i]).get(children[i][i1]);
@@ -426,12 +484,17 @@ public class AddMessage extends BaseActivity {
                         childCheckMap.get(group[i]).put(children[i][i1],false);
 //                        memberTextView.setText(memberText.replace(childViewHolder.childNname.getText(),"").trim());
                     }
-                    memberText = "";
+
+//                    Glide.with(context).load(src).apply(options).into(circleImageView);
+                    imageLayout.removeAllViews();
                     ArrayList<Integer> userId = getCheckChild();
                     for(int id:userId){
-                        memberText += (userNameMap.get(id)+" ");
+                        byte[] src1 = userImageMap.get(id);
+                        CircleImageView circleImageView = new CircleImageView(context);
+                        RequestOptions options = new RequestOptions().override(80,80).centerCrop();
+                        Glide.with(context).load(src1).apply(options).into(circleImageView);
+                        imageLayout.addView(circleImageView);
                     }
-                    memberTextView.setText(memberText.trim());
                 }
             });
             return view;
@@ -462,6 +525,7 @@ public class AddMessage extends BaseActivity {
         }
 
         class ChildViewHolder{
+            CircleImageView userImage;
             TextView childNname;
             CheckBox checkBox;
         }

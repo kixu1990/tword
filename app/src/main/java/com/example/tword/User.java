@@ -17,6 +17,9 @@ public class User {
 
     public int userId = 0;
 
+    private String passwrd = "";
+    private String loginName = "";
+
     private static User INSTANCE = new User();
 
     private User(){};
@@ -41,5 +44,19 @@ public class User {
         this.userName = userName;
     }
 
+    public String getPasswrd() {
+        return passwrd;
+    }
 
+    public void setPasswrd(String passwrd) {
+        this.passwrd = passwrd;
+    }
+
+    public String getLoginName() {
+        return loginName;
+    }
+
+    public void setLoginName(String loginName) {
+        this.loginName = loginName;
+    }
 }

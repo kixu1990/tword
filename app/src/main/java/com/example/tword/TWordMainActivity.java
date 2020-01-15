@@ -2,26 +2,33 @@ package com.example.tword;
 
 import android.content.Intent;
 import android.graphics.Color;
-import android.support.design.widget.FloatingActionButton;
-import android.support.v4.app.Fragment;
-import android.support.v4.view.ViewPager;
 import android.os.Bundle;
-import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import androidx.appcompat.widget.Toolbar;
+
+import androidx.fragment.app.Fragment;
+import androidx.viewpager.widget.ViewPager;
+
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import org.litepal.crud.DataSupport;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import de.hdodenhof.circleimageview.CircleImageView;
 import fragment.FragmentViewPagerAdapter;
 import fragment.MainMessageFragment;
 import fragment.MainNoticeFragment;
 import fragment.MainSatfflistFragment;
 import fragment.MainToolsFragment;
+import litepal.SatffDB;
 import materialdesignutil.StatusBarUtil;
 import message.MyMessage;
 import mutils.GetTopActivity;
@@ -31,6 +38,7 @@ public class TWordMainActivity extends BaseActivity{
     private  ImageView tools,satffList,notice,message;
     private  TextView tools_text,satffList_text,notice_text,message_text,toolbar_text;
     private  LinearLayout tools_layout,satfflist_layout,notice_layout,message_layout,fab_layout;
+    private CircleImageView mainUserCIV;
 
     private Fragment messageFragment,satfflistFragment,noticeFrament,toolsFragment;
     private List<Fragment> fragmentList;
@@ -41,7 +49,7 @@ public class TWordMainActivity extends BaseActivity{
     public String[] departments;
     public int[][] usersId;
     public HashMap<Integer,String> userName;
-
+    public HashMap<Integer,byte[]> userImage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,11 +62,12 @@ public class TWordMainActivity extends BaseActivity{
             StatusBarUtil.setStatusBarColor(this,0x55000000);
         }
 
-        Intent intent = getIntent();
-        final MyMessage rsMessage = (MyMessage) intent.getSerializableExtra("message");
-        departments = (String[]) rsMessage.getObjects()[0];
-        usersId = (int[][]) rsMessage.getObjects()[1];
-        userName= (HashMap<Integer, String>) rsMessage.getObjects()[2];
+//        Intent intent = getIntent();
+//        final MyMessage rsMessage = (MyMessage) intent.getSerializableExtra("message");
+//        departments = (String[]) rsMessage.getObjects()[0];
+//        usersId = (int[][]) rsMessage.getObjects()[1];
+//        userName= (HashMap<Integer, String>) rsMessage.getObjects()[2];
+//        userImage = (HashMap<Integer, byte[]>) rsMessage.getObjects()[3];
 
         Toolbar toolbar = (Toolbar)findViewById(R.id.main_toolbar);
         setSupportActionBar(toolbar);
@@ -75,6 +84,7 @@ public class TWordMainActivity extends BaseActivity{
         message_text = (TextView)findViewById(R.id.message_text);
         message_layout = (LinearLayout)findViewById(R.id.message_layout);
         toolbar_text = (TextView)findViewById(R.id.main_toolbar_tv);
+        mainUserCIV = (CircleImageView)findViewById(R.id.main_user_CIV);
 
         fab_layout = (LinearLayout)findViewById(R.id.add_layout);
         addFab = (FloatingActionButton)findViewById(R.id.add_fabutton);
@@ -97,13 +107,23 @@ public class TWordMainActivity extends BaseActivity{
             @Override
             public void onClick(View view) {
                 Intent intent = new Intent(TWordMainActivity.this,AddMessage.class);
-                intent.putExtra("rsMessage",rsMessage);
+//                intent.putExtra("rsMessage",rsMessage);
 
 //                Intent intent = new Intent(TWordMainActivity.this,MainActivity.class);
                 startActivity(intent);
             }
         });
 
+        List<SatffDB> satffDBS = DataSupport.select("*")
+                                            .find(SatffDB.class);
+        byte[] src = null;
+        for(SatffDB satff : satffDBS){
+            if(satff.getSatffId() == User.getINSTANCE().getUserId()){
+                src = satff.getUserImage();
+            }
+        }
+        RequestOptions options = new RequestOptions().override(120,120).centerCrop();
+        Glide.with(this).load(src).apply(options).into(mainUserCIV);
         viewPager.setAdapter(new FragmentViewPagerAdapter(getSupportFragmentManager(),fragmentList));
         setIconColor();
         viewPager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener(){

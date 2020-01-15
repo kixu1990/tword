@@ -5,14 +5,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.tword.R;
 import com.example.tword.User;
@@ -43,9 +43,8 @@ public class MainMessageFragment extends Fragment {
     private GetMainMessageReceiver getMainMessageReceiver;
     private GetContentReceiver getContentReceiver;
     private Context context;
-    @Nullable
     @Override
-    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater,  ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.main_messsage_fragment,container,false);
         recyclerView = view.findViewById(R.id.main_message_fmt_rv);
         LinearLayoutManager layoutManager = new LinearLayoutManager(container.getContext());

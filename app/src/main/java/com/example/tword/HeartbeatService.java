@@ -6,8 +6,12 @@ import android.content.Intent;
 import android.os.IBinder;
 import android.util.Log;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
+
+import message.MyMessage;
+import nio.NioSocketChannel;
 
 public class HeartbeatService extends Service {
     public HeartbeatService() {
@@ -27,28 +31,30 @@ public class HeartbeatService extends Service {
             @Override
             public void run() {
                 Log.d("HeartbeatService","心跳启动！");
-                while(true){
-                    heartbeat();
-                    try {
-                        Thread.sleep(60000);
-                    }catch (Exception e){
-
-                    }
+                while(true) {
+                    sendHeartBeat();
                 }
-
             }
         }).start();
     }
-    private void heartbeat(){
-        try{
-            Socket socket = new Socket(ServerInfo.SERVER_IP,ServerInfo.HEARTPORT);
-            OutputStream os = socket.getOutputStream();
-//            os.write((new User().getUserName()+"\n<OO><oo><00><oo><OO>").getBytes());
-            os.close();
-            socket.close();
-        }catch (Exception e){
+
+    /**
+     * 暂时设为3分钟发一次心跳，后期重新优化
+     */
+    private void sendHeartBeat(){
+        MyMessage message = new MyMessage(User.getINSTANCE().getUserId(),new int[]{0},"heartBeat");
+        try {
+            NioSocketChannel.getInstance().sendMessage(message);
+        } catch (IOException e) {
+            NioSocketChannel.getInstance().login(User.getINSTANCE().getLoginName(),User.getINSTANCE().getPasswrd());
+        }
+
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
+
 
     }
 }

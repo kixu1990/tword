@@ -1,16 +1,23 @@
 package com.example.tword;
 
-import android.support.v7.widget.RecyclerView;
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
+
 import java.util.List;
 
+import de.hdodenhof.circleimageview.CircleImageView;
+
 /**
- * Created by Administrator on 2019/9/7.
+ * Created by kixu on 2019/9/7.
  */
 
 public class MsgAdapter extends RecyclerView.Adapter<MsgAdapter.ViewHolder>{
@@ -21,6 +28,7 @@ public class MsgAdapter extends RecyclerView.Adapter<MsgAdapter.ViewHolder>{
         LinearLayout rightLayout;
         TextView leftMsg;
         TextView rightMsg;
+        CircleImageView leftCIV,rightCIV;
 
         public ViewHolder(View itemView) {
             super(itemView);
@@ -28,6 +36,8 @@ public class MsgAdapter extends RecyclerView.Adapter<MsgAdapter.ViewHolder>{
             rightLayout = (LinearLayout) itemView.findViewById(R.id.right_layout);
             leftMsg = (TextView)itemView.findViewById(R.id.left_msg);
             rightMsg = (TextView)itemView.findViewById(R.id.right_msg);
+            leftCIV = (CircleImageView)itemView.findViewById(R.id.left_image_CIV);
+            rightCIV = (CircleImageView)itemView.findViewById(R.id.right_image_CIV);
         }
     }
 
@@ -42,10 +52,14 @@ public class MsgAdapter extends RecyclerView.Adapter<MsgAdapter.ViewHolder>{
             holder.leftLayout.setVisibility(View.VISIBLE);
             holder.rightLayout.setVisibility(View.GONE);
             holder.leftMsg.setText(msg.getContent());
+            RequestOptions options = new RequestOptions().override(80,80).centerCrop();
+            Glide.with(holder.itemView).load(msg.getImageSrc()).apply(options).into(holder.leftCIV);
         }else if(msg.getType() == msg.TYPE_SENT){
             holder.rightLayout.setVisibility(View.VISIBLE);
             holder.leftLayout.setVisibility(View.GONE);
             holder.rightMsg.setText(msg.getContent());
+            RequestOptions options = new RequestOptions().override(80,80).centerCrop();
+            Glide.with(holder.itemView).load(msg.getImageSrc()).apply(options).into(holder.rightCIV);
         }
 
     }

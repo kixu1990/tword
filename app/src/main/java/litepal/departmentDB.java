@@ -9,6 +9,24 @@ import org.litepal.crud.DataSupport;
 public class departmentDB extends DataSupport {
     private String departmentName;
     private String departmentManager;
+    private int userId;
+    private int version;
+
+    public int getUserId() {
+        return userId;
+    }
+
+    public void setUserId(int userId) {
+        this.userId = userId;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
+    }
 
     public String getDepartmentName() {
         return departmentName;
