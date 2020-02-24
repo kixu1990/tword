@@ -47,6 +47,10 @@ import mutils.GetTopActivity;
 import nio.NioSocketChannel;
 import nio.NioSocketClient;
 
+/**
+ * kixu 2020-02-24
+ * 对话显示主体类
+ */
 public class MainActivity extends BaseActivity{
 
     private List<Msg> msgList = new ArrayList<>();

@@ -76,7 +76,7 @@ public class GetMessageService extends Service {
  //                   Selector selector = NioSocketChannel.getInstance().getSelector();
                     SocketChannel socketChannel = NioSocketChannel.getInstance().getSocketChannel();
                     ByteBuffer buffer = NioSocketChannel.getInstance().getByteBuffer();
-                    Log.d("GetMessageService",socketChannel.toString());
+//                    Log.d("GetMessageService",socketChannel.toString());
 
                     Selector selector = Selector.open();
 //            SocketChannel socketChannel = SocketChannel.open();
@@ -190,29 +190,45 @@ public class GetMessageService extends Service {
     }
 
     private void unbindHeadr(MyMessage message,InetAddress inetAddress){
-//        Log.d("kkkkk",message.getHeader());
-//        if(message.getHeader().equals("clicklink")) {
-//            replyLink();
-//        }else if(message.getHeader().equals("login")){
-//            sendLoginBroadcast(message);
-//        }else if(message.getHeader().equals("createMessage")){
-//            sendMainMessageBroadcast(message);
-//            insertMainMessage(message);
-//        }
-
         switch (message.getHeader()){
-            case ("login"): sendLoginBroadcast(message);
-                            resSatffList(message);
+            //登录信息
+            case ("login"): sendLoginBroadcast(message);     //广播到登录界面
+                            if(message.getStringContent().equals("true")) {  //登录成功则更新通迅录
+                                resSatffList(message);       //更新通迅录列表
+                            }
                 break;
-            case ("createMessage"): sendMainMessageBroadcast(message);
-                                      insertMainMessage(message);
+            //创建消息信息
+            case ("createMessage"): sendMainMessageBroadcast(message); //广播到主界面
+                                      insertMainMessage(message);      //写入数据库
                 break;
+            //多个合并消息的分解,此分支暂时不用
             case ("rsMessages"):unbindMessage(message);
                 break;
-            case ("messageContent"): sendContentBroadcast(message);
-                                        insertMessageContent(message);
-                                        sendNotification(message);
+            //内容信息
+            case ("messageContent"): sendContentBroadcast(message);   //广播到消息界面
+                                        insertMessageContent(message); //写入数据库
+                                        resCreateMessage(message);     //检查消息主体是否存在
+                                        sendNotification(message);     //发送提示消息
                 break;
+        }
+    }
+
+    private void resCreateMessage(MyMessage message) {
+        boolean flas = true;
+        List<MainMessageDB> mainMessageDBS = DataSupport.select("*").find(MainMessageDB.class);
+        for(MainMessageDB mainMessage : mainMessageDBS){
+            if(message.getMessageId() == mainMessage.getMessageId()){
+                flas = false;
+            }
+        }
+        if(flas){
+            MyMessage myMessage = new MyMessage(User.getINSTANCE().getUserId(),new int[]{0},"resCreateMessage");
+            myMessage.setMessageId(message.getMessageId());
+            try {
+                NioSocketChannel.getInstance().sendMessage(myMessage);
+            }catch (IOException e){
+                e.printStackTrace();
+            }
         }
     }
 
@@ -253,10 +269,10 @@ public class GetMessageService extends Service {
             satffDB.setDepartment((String)users.get(i)[2]);
             satffDB.setUserImage((byte[])users.get(i)[3]);
             satffDB.setVersion((int)users.get(i)[4]);
-            satffDB.setPost((String)users.get(i)[5]);
-            satffDB.setEmail((String)users.get(i)[6]);
-            satffDB.setPhoneNumber((String)users.get(i)[7]);
-            satffDB.setState((String)users.get(i)[8]);
+                satffDB.setPost((String) users.get(i)[5]);
+                satffDB.setEmail((String) users.get(i)[6]);
+                satffDB.setPhoneNumber((String) users.get(i)[7]);
+                satffDB.setState((String) users.get(i)[8]);
             satffDB.setUserId(User.getINSTANCE().getUserId());
             satffDB.save();
 //           Log.d("写入数据库","添加用户信息！"+satffDB.getSatffName());
@@ -266,20 +282,22 @@ public class GetMessageService extends Service {
     private void sendNotification(MyMessage message){
         String topActivityName = GetTopActivity.getINSTANCE().getTopActivity();
  //       Log.d("通知",topActivityName +": "+MainActivity.class.getName()+": "+TWordMainActivity.class.getName());
-        if(topActivityName.equals(MainActivity.class.getName()) || topActivityName.equals(TWordMainActivity.class.getName())){
- //           Log.d("通知",topActivityName +": "+MainActivity.class.getName());
+        if(topActivityName != null) {
+            if (topActivityName.equals(MainActivity.class.getName()) || topActivityName.equals(TWordMainActivity.class.getName())) {
+                //           Log.d("通知",topActivityName +": "+MainActivity.class.getName());
 
-        }else {
-            List<MainMessageDB>  mainMessages = DataSupport.select("*")
-                    .where("messageId = ? and userId = ?",String.valueOf(message.getMessageId()),String.valueOf(User.getINSTANCE().userId))
-                    .find(MainMessageDB.class);
-            String title = mainMessages.get(0).getHeadlin();
-            Intent intent = new Intent(this,TWordMainActivity.class);
+            } else {
+                List<MainMessageDB> mainMessages = DataSupport.select("*")
+                        .where("messageId = ? and userId = ?", String.valueOf(message.getMessageId()), String.valueOf(User.getINSTANCE().userId))
+                        .find(MainMessageDB.class);
+                String title = mainMessages.get(0).getHeadlin();
+                Intent intent = new Intent(this, TWordMainActivity.class);
 //            intent.putExtra("messageId",message.getMessageId());
 //            intent.putExtra("messageHeard",title);//
 //                Log.d("发送的",String.valueOf(message.getMessageId())+" : "+title);
-            PendingIntent pi = PendingIntent.getActivity(this,0,intent,0);
-            notification(pi,title,message.getStringContent(),15,NotificationCompat.PRIORITY_MAX);
+                PendingIntent pi = PendingIntent.getActivity(this, 0, intent, 0);
+                notification(pi, title, message.getStringContent(), 15, NotificationCompat.PRIORITY_MAX);
+            }
         }
     }
 
