@@ -7,16 +7,16 @@ import org.litepal.crud.DataSupport;
  */
 
 public class SatffDB extends DataSupport {
-    private String satffName;
-    private int satffId;
-    private String department;
-    private byte[] userImage;
-    private int version;
-    private int userId;
-    private String post;
-    private String email;
-    private String phoneNumber;
-    private String state;
+    private String satffName;     //通迅录名
+    private int satffId;          //通迅录I
+    private String department;    //部门
+    private byte[] userImage;     //通迅录名像
+    private int version;          //版本号
+    private int userId;           //使用者ID
+    private String post;          //职位
+    private String email;         //电邮
+    private String phoneNumber;   //电话号码
+    private String state;         //是否在上班的状态
 
     public String getPost() {
         return post;

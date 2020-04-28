@@ -6,9 +6,6 @@ package nio;
  */
 
 public class IntFlidByte {
-    	/*
-	 * 封装包头
-	 */
 
     public static byte[] getHeadByte(int value) {
         byte[] result = new byte[4];
@@ -19,14 +16,12 @@ public class IntFlidByte {
         return result;
     }
 
-    /*
-     * 解封包头
-     */
+
     public static int getHeadInt(byte[] bytes) {
         int value = 0;
         for (int i = 0; i < 4; i++) {
             int shift = (4 - 1 - i) * 8;
-            value += (bytes[i] & 0x000000FF) << shift;// 往高位游
+            value += (bytes[i] & 0x000000FF) << shift;
         }
         return value;
     }

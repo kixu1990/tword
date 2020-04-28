@@ -13,6 +13,9 @@ import java.net.Socket;
 import message.MyMessage;
 import nio.NioSocketChannel;
 
+/**
+ * 此类作废 2020-3-27 by kixu
+ */
 public class HeartbeatService extends Service {
     public HeartbeatService() {
     }

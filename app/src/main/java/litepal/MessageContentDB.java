@@ -9,11 +9,11 @@ import java.sql.Date;
  */
 
 public class MessageContentDB extends DataSupport {
-    private int sender;
-    private long senderTime;
-    private String stringContent;
-    private long msgId;
-    private int userId;
+    private int sender;           //发送者
+    private long senderTime;      //发送时间
+    private String stringContent; //文本内容
+    private long msgId;           // 消息ID
+    private int userId;           //使用者ID
 
     public int getSender() {
         return sender;

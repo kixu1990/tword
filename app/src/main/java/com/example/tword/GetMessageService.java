@@ -9,10 +9,12 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
+import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 
+import androidx.annotation.BinderThread;
 import androidx.core.app.NotificationCompat;
 
 import org.litepal.crud.DataSupport;
@@ -41,6 +43,10 @@ import nio.ObjectFlidByte;
 
 public class GetMessageService extends Service {
 
+    private SocketChannel socketChannel;
+    private ByteBuffer buffer;
+    private MBinder mBinder = new MBinder();
+
     private static final int PORT = 11002;
 
     private ByteBuffer cacheBuffer = ByteBuffer.allocate(1024 * 10000);
@@ -49,18 +55,28 @@ public class GetMessageService extends Service {
     int cacheBufferLen = -1;
 
     public GetMessageService() {
+
+    }
+
+    public class MBinder extends Binder {
+        public void startGetThred(){
+            startGetMessageThread();
+        }
+    }
+
+    protected void startGetMessageThread(){
+        Log.d("重启了线程！！", "GetMessageService: ");
     }
 
     @Override
     public IBinder onBind(Intent intent) {
         // TODO: Return the communication channel to the service.
-        throw new UnsupportedOperationException("Not yet implemented");
+        return mBinder;
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
-
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
             String chennelId = "tword";
             String chennelName = "聊天消息";
@@ -72,57 +88,39 @@ public class GetMessageService extends Service {
             @Override
             public void run() {
                 try {
-                    Log.d("GetMessageService : ","得到通道");
- //                   Selector selector = NioSocketChannel.getInstance().getSelector();
                     SocketChannel socketChannel = NioSocketChannel.getInstance().getSocketChannel();
                     ByteBuffer buffer = NioSocketChannel.getInstance().getByteBuffer();
 //                    Log.d("GetMessageService",socketChannel.toString());
-
                     Selector selector = Selector.open();
-//            SocketChannel socketChannel = SocketChannel.open();
-//            SocketAddress socketAddress = new InetSocketAddress(ServerInfo.SERVER_IP,ServerInfo.PORT);
-//            socketChannel.connect(socketAddress);
-//            ByteBuffer buffer = ByteBuffer.allocate(1024);
                     socketChannel.configureBlocking(false);
                     socketChannel.register(selector, SelectionKey.OP_READ,buffer);
 
                     nio.SocketHandler handler = new nio.SocketHandler();
                     while(true){
-                        selector.select();
+                       selector.select();
 
                         Iterator<SelectionKey> keyIterator = selector.selectedKeys().iterator();
                         while (keyIterator.hasNext()){
                             SelectionKey key = keyIterator.next();
                             if(key.isReadable()){
-                                   handleRead(key);
-                                Log.d("触发可读事件： ","0000");
+                                handleRead(key);
                             }
                             keyIterator.remove();
                         }
+
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
         }).start();
-//
-//        new Thread(new Runnable(){
-//            @Override
-//            public void run() {
-//                int i=0;
-//                while (true) {
-//                    Log.d("后台服务", "正在运行！！"+(i++));
-//                    try {
-//                        Thread.sleep(1000);
-//                    } catch (Exception e) {
-//                        e.printStackTrace();
-//                    }
-//                }
-//
-//            }
-//        }).start();
     }
 
+
+    /**
+     * @param selectionKey
+     * @throws IOException
+     */
     public void handleRead(SelectionKey selectionKey) throws IOException {
         int head_length = 4;
         byte[] headByte = new byte[4];
@@ -143,14 +141,15 @@ public class GetMessageService extends Service {
             int position = 0;
             int i = 0;
             while (byteBuffer.remaining() > 0) {
-//           Log.d("第 ",String.valueOf(i++)+" 次");
+//                Log.d("开始包头长度： ",String.valueOf(bodyLen));
+
                 if (bodyLen == -1) { //没有读出包头，先读包头
-                    Log.d("进入读包头！", "0000");
+ //                  Log.d("进入读包头！", "0000");
                     if (byteBuffer.remaining() >= head_length) { //可以读出包头，否则缓存
                         byteBuffer.mark();
                         byteBuffer.get(headByte);
                         bodyLen = IntFlidByte.getHeadInt(headByte);
-                        Log.d("包头长度：", String.valueOf(bodyLen));
+//                      Log.d("包头长度：", String.valueOf(bodyLen));
                     } else {
                         byteBuffer.reset();
                         cache = true;
@@ -158,24 +157,24 @@ public class GetMessageService extends Service {
                         cacheBuffer.put(byteBuffer);
                     }
                 } else {
-                    Log.d("进入读消息体！还有多少未读：", String.valueOf(byteBuffer.remaining()) + "包体长度： " + bodyLen);
+//                    Log.d("进入读消息体！还有多少未读：", String.valueOf(byteBuffer.remaining()) + "包体长度： " + bodyLen);
                     if (byteBuffer.remaining() >= bodyLen) { //大于等于一个包，否则缓存
                         byte[] bodyByte = new byte[bodyLen];
                         byteBuffer.get(bodyByte, 0, bodyLen);
                         position += bodyLen;
                         byteBuffer.mark();
                         bodyLen = -1;
-                        Log.d("读到一个消息", "Position = " + String.valueOf(position));
+ //                       Log.d("读到一个消息", "Position = " + String.valueOf(position));
                         message = (MyMessage) ObjectFlidByte.byteArrayToObject(bodyByte);
-                        Log.d("消息头：", message.getHeader());
+//                        Log.d("消息头：", message.getHeader());
                         unbindHeadr(message, null);
                         cache = false;
                     } else {
-                        Log.d("进入缓存：", "----------------------------------------上一个包头：" + String.valueOf(bodyLen));
-                        byteBuffer.mark();
-                        byteBuffer.reset();
+ //                       Log.d("进入缓存：", "----------------------------------------上一个包头：" + String.valueOf(bodyLen));
+//                        byteBuffer.mark();
+//                        byteBuffer.reset();
                         cacheBuffer.clear();
-                        Log.d("ByteBuffer打入缓存数量：", String.valueOf(byteBuffer.remaining()));
+ //                       Log.d("ByteBuffer打入缓存数量：", String.valueOf(byteBuffer.remaining()));
                         cacheBufferLen = byteBuffer.remaining();
                         cacheBuffer.put(byteBuffer);
                         cache = true;
@@ -210,7 +209,19 @@ public class GetMessageService extends Service {
                                         resCreateMessage(message);     //检查消息主体是否存在
                                         sendNotification(message);     //发送提示消息
                 break;
+            case ("getErpReport"): sendErpReportBroadcast(message);
+                break;
         }
+    }
+
+    /**
+     * ERP数据广播
+     * @param message
+     */
+    private void sendErpReportBroadcast(MyMessage message){
+        Intent intent = new Intent("com.example.tword.GETERPREPORT_BROADCAST");
+        intent.putExtra("message",message);
+        sendBroadcast(intent);
     }
 
     private void resCreateMessage(MyMessage message) {
@@ -236,7 +247,7 @@ public class GetMessageService extends Service {
         ArrayList<Object[]> departments = (ArrayList<Object[]>) message.getObjects()[0];
         ArrayList<Object[]> users = (ArrayList<Object[]>) message.getObjects()[1];
 
-        Log.d("接收到的部门数量",String.valueOf(departments.size())+"   接收到的用户数量"+String.valueOf(users.size()));
+//        Log.d("接收到的部门数量",String.valueOf(departments.size())+"   接收到的用户数量"+String.valueOf(users.size()));
 
         List<departmentDB> departmentDBS = DataSupport.select("*").where("userId = ?",String.valueOf(User.getINSTANCE().getUserId()))
                                                                              .find(departmentDB.class);
@@ -325,12 +336,40 @@ public class GetMessageService extends Service {
         notificationManager.createNotificationChannel(channel);
     }
 
+    /**
+     * 得到需要在主消息界面显示的图标
+     * @param sender
+     * @return
+     */
+    private byte[] getMainMessageIamgeByte(int sender){
+        byte[] imageByte = null;
+        if(sender != 0){
+            //如果是某个用户发过来的消息，则使用这个用户的头像
+            List<SatffDB> satffs = DataSupport.select("*")
+                    .where("satffId = ?",String.valueOf(sender))
+                    .find(SatffDB.class);
+            for(SatffDB satff :satffs){
+                imageByte = satff.getUserImage();
+            }
+        }else {
+            //如果是服务器发过来的消息，在这里做逻辑
+        }
+
+        return imageByte;
+    }
+
+    /**
+     * 添加主消息进入数据库
+     * @param message
+     */
     private void insertMainMessage(MyMessage message){
+
         MainMessageDB mm = new MainMessageDB();
         mm.setMessageId(message.getMessageId());
         mm.setHeadlin(message.getStringContent());
         mm.setUserId(User.getINSTANCE().getUserId());
         mm.setDate(new Date(message.getDate().getTime()));
+        mm.setImage(getMainMessageIamgeByte(message.getSender()));
         mm.save();
 //        Log.d("添加数据库",mm.getHeadlin() +": "+User.getINSTANCE().getUserId());
         for(int i : message.getReceivers()){
@@ -378,22 +417,6 @@ public class GetMessageService extends Service {
         sendBroadcast(intent);
     }
 
-    private void replyLink(){
-//        try{
-//            Socket socket = new Socket(ServerInfo.SERVER_IP,ServerInfo.PORT);
-//            MyMessage message = new MyMessage(new User().getUserName(),new String[]{new User().getUserName()},"reply_link");
-//            message.setStringContent("this is checklink");
-//            OutputStream os = socket.getOutputStream();
-//            ObjectOutputStream oos = new ObjectOutputStream(os);
-//            oos.writeObject(message);
-//            oos.close();
-//            os.close();
-//            socket.close();
-//        }catch (Exception e){
-//            e.printStackTrace();
-//        }
-    }
-
     private void sendMsgBroadcast(MyMessage message){
         String msg = message.getStringContent();
         Intent intent = new Intent("com.example.tword.GETMESSAGE_BROADCAST");
@@ -424,36 +447,11 @@ public class GetMessageService extends Service {
 
     private void sendMainMessageBroadcast(MyMessage message){
         Intent intent = new Intent("com.example.tword.GETMAINMESSAGE_BROADCAST");
+        message.setObjects(new Object[]{getMainMessageIamgeByte(message.getSender())});
         intent.putExtra("createMessage",message);
         sendBroadcast(intent);
         Log.d("发送MainMessage广播",message.getHeader());
     }
-
-//    private void unbindHeadr(String message,InetAddress inetAddress){
-//        String[] nubind = message.split("\n");
-//        String userName = nubind[1].trim();
-//        boolean b = userName.equals("lidajiao");
-//        Log.d("判断", userName+"<>"+"lidajiao   "+Boolean.toString(b));
-//        if(nubind[0].equals("clicklink")){
-//            replyLink(userName);
-//        }else {
-//            sendMsgBroadcast(message);
-//        }
-//    }
-
-//    private void replyLink(String s){
-//        try {
-//            Socket socket = new Socket(ServerInfo.SERVER_IP, ServerInfo.PORT);
-//            String messageFull = s+"\n"+new User().getUserName()+"\n"+"reply_link"+"\n"+"this is checklink";
-//            byte[] b = messageFull.getBytes("utf-8");
-//            OutputStream ops = socket.getOutputStream();
-//            ops.write(b);
-//            ops.close();
-//            socket.close();
-//        }catch (IOException e){
-//            e.printStackTrace();
-//        }
-//    }
 
     private void sendMsgBroadcast(String message){
         Intent intent = new Intent("com.example.tword.GETMESSAGE_BROADCAST");

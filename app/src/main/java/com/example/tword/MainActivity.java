@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -53,21 +54,21 @@ import nio.NioSocketClient;
  */
 public class MainActivity extends BaseActivity{
 
-    private List<Msg> msgList = new ArrayList<>();
-    private EditText inputText;
+    private List<Msg> msgList = new ArrayList<>();  //对话内容
+    private EditText inputText;                     //输入文本框
     private Button send;
     private RecyclerView msgRecyclerView;
-    private MsgAdapter adapter;
-    private ImageView contentAdd;
-    private CardView contentSend;
-    private long messageId;
+    private MsgAdapter adapter;                    //支技器
+    private ImageView contentAdd;                  //加号按钮
+    private CardView contentSend;                  //发送按钮
+    private long messageId;                        //本对话的ID
     private String messageHeard;
-    private TextView toolbarTV;
-    private FlexboxLayout heardFBL;
+    private TextView toolbarTV;                    //状态栏
+    private FlexboxLayout heardFBL;                //群组成员
     private CircleImageView leftCIV,rightCIV;
 
     private IntentFilter intentFilter;
-    private GetMessageReceiver getMessageReceiver;
+    private GetMessageReceiver getMessageReceiver; //对话接收器
     private List<MainMessageDB>  mainMessages;
 
     @Override
@@ -75,18 +76,17 @@ public class MainActivity extends BaseActivity{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        //侵入式状态栏-------------------------------------------------------------------------------------------
         StatusBarUtil.setRootViewFitsSystemWindows(this,true);
         StatusBarUtil.setTranslucentStatus(this);
         StatusBarUtil.setStatusBarColor(this,Color.argb(255,235,235,235));
         if(!StatusBarUtil.setStatusBarDarkTheme(this,true)){
             StatusBarUtil.setStatusBarColor(this,0x55000000);
         }
-//        getWindow().setNavigationBarColor(Color.argb(255,235,235,235));
-
- //       getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.content_toolbar);
         setSupportActionBar(toolbar);
+        //--------------------------------------------------------------------------------------------------------
 
         inputText = (EditText)findViewById(R.id.input_text);
         contentAdd = (ImageView)findViewById(R.id.content_add_iv);
@@ -99,16 +99,31 @@ public class MainActivity extends BaseActivity{
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
 
         final User user = User.getINSTANCE();
-//        Msg msg = new Msg(">>>我是："+user.getUserName()+"<<<",Msg.TYPE_SENT);
-//        msgList.add(msg);
-//        Msg msg1 = new Msg("测试显示 ！！！",Msg.TYPE_RECEIVED);
-//        msgList.add(msg1);
 
+        GetTopActivity.getINSTANCE().setTopActivity(getClass().getName());    //标识本Activity为正在活动页面
+
+        Intent intent = getIntent();                                          //得到传入的Intent
+        messageId = intent.getLongExtra("messageId",0);  //得到需要打开的消息ID
+        mainMessages = DataSupport.select("*")                    //从数据库中提取对话内容
+                .where("messageId = ? and userId = ?",String.valueOf(messageId),String.valueOf(User.getINSTANCE().userId))
+                .find(MainMessageDB.class);
+        String title = intent.getStringExtra("messageHeard");
+        toolbarTV.setText(title);                                             //显示消息标题
+
+        //防止活动被回收后，再次重建时，数据丢失
+        if(savedInstanceState != null){                                          //检查是否有保存的数据
+            msgList = savedInstanceState.getParcelableArrayList("msgList"); //有的话，提取出来
+        }else {
+            msgInit();                                                            //没有的话，初始化数据
+        }
+        heardImageInit();                                                        //初始化成员头像
+        //设置RedyclerView---------------------------------------------------------------------------------
         msgRecyclerView.setLayoutManager(layoutManager);
-        adapter = new MsgAdapter(msgList);
-        msgRecyclerView.setAdapter(adapter);
-        msgRecyclerView.scrollToPosition(msgList.size() - 1);
-
+        adapter = new MsgAdapter(msgList);                   //填充数据
+        msgRecyclerView.setAdapter(adapter);                 //设置支持器
+        msgRecyclerView.scrollToPosition(msgList.size() - 1);//显示最后一行
+        //--------------------------------------------------------------------------------------------------
+        //文本框事件监听
         inputText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
@@ -132,17 +147,20 @@ public class MainActivity extends BaseActivity{
             }
         });
 
+         //发送按扭事件监听
          contentSend.setOnClickListener(new View.OnClickListener() {
              @Override
              public void onClick(View view) {
+                 //创建需要发送的消息
                  MyMessage message = new MyMessage(User.getINSTANCE().getUserId(),new int[]{0},"messageContent");
                  message.setStringContent(inputText.getText().toString());
-                 inputText.setText("");
-                 contentAdd.setVisibility(View.VISIBLE);
-                 contentSend.setVisibility(View.GONE);
                  message.setMessageId(messageId);
+
+                 inputText.setText("");                  //文本框清空
+                 contentAdd.setVisibility(View.VISIBLE); //显示加号
+                 contentSend.setVisibility(View.GONE);   //隐藏发送按扭
                  try {
-                     NioSocketChannel.getInstance().sendMessage(message);
+                     NioSocketChannel.getInstance().sendMessage(message);  //将消息了送给服务器
                  }catch (IOException e){
                      e.printStackTrace();
                  }
@@ -153,7 +171,15 @@ public class MainActivity extends BaseActivity{
 
     @Override
     protected void onPostResume() {
+
         super.onPostResume();
+
+        //起动消息广播接收器--------------------------------------------------------------------------------
+        intentFilter = new IntentFilter();
+        intentFilter.addAction("com.example.tword.GETCONTENT_BROADCAST");
+        getMessageReceiver = new GetMessageReceiver();
+        registerReceiver(getMessageReceiver,intentFilter);
+        //--------------------------------------------------------------------------------------------------
     }
 
     @Override
@@ -162,6 +188,7 @@ public class MainActivity extends BaseActivity{
         return true;
     }
 
+    //显示成员方法
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         switch (item.getItemId()){
@@ -179,38 +206,17 @@ public class MainActivity extends BaseActivity{
     protected void onResume() {
         super.onResume();
 
-
-        intentFilter = new IntentFilter();
-        intentFilter.addAction("com.example.tword.GETCONTENT_BROADCAST");
-        getMessageReceiver = new GetMessageReceiver();
-        registerReceiver(getMessageReceiver,intentFilter);
-
- //       Log.d("MainActivity","onResume :"+getClass().getName());
-        GetTopActivity.getINSTANCE().setTopActivity(getClass().getName());
-
-        Intent intent = getIntent();
-        messageId = intent.getLongExtra("messageId",0);
-//        messageHeard = intent.getStringExtra("messageHeard");
-//        Log.d("接收到广播的消息名",String.valueOf(messageId));
-        mainMessages = DataSupport.select("*")
-                .where("messageId = ? and userId = ?",String.valueOf(messageId),String.valueOf(User.getINSTANCE().userId))
-                .find(MainMessageDB.class);
-        String title = intent.getStringExtra("messageHeard");
-//       Log.d("数据库提取的成员组",String.valueOf(mainMessages.get(0).getMembers())+mainMessages.get(0).getMessageId()+mainMessages.get(0).getHeadlin());
-        toolbarTV.setText(title);
-        msgInit();
-        heardImageInit();
-        adapter.notifyItemInserted(msgList.size() - 1);
-        msgRecyclerView.scrollToPosition(msgList.size() - 1);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-  //      Log.d("MainActivity","onPause :"+getClass().getName());
         GetTopActivity.getINSTANCE().setTopActivity(" ");
     }
 
+    /**
+     * 初始化成员头像方法
+     */
     private void heardImageInit(){
 
         List<SatffDB> satffs = DataSupport.select("*")
@@ -234,6 +240,15 @@ public class MainActivity extends BaseActivity{
         }
     }
 
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putParcelableArrayList("msgList", (ArrayList<? extends Parcelable>) msgList); //防止活动被回收数据丢失，回收时存好数据
+    }
+
+    /**
+     * 初始化对话内容
+     */
     private void msgInit(){
         String userId = String.valueOf( User.getINSTANCE().getUserId());
 
@@ -258,11 +273,18 @@ public class MainActivity extends BaseActivity{
                 }
             }
             Msg msg = new Msg(content.getStringContent(), type,src);
-//            Log.d("getStringContent",String.valueOf(content.getStringContent()));
+//           Log.d("getStringContent",String.valueOf(content.getStringContent()));
             msgList.add(msg);
         }
+
     }
 
+    /**
+     * 请用此方法启动本Activity
+     * @param context
+     * @param messageId    消息ID
+     * @param messageHeard 消息标题
+     */
     public static void actionStart(Context context,long messageId,String messageHeard){
         Intent intent = new Intent(context,MainActivity.class);
         intent.putExtra("messageId",messageId);
@@ -276,18 +298,14 @@ public class MainActivity extends BaseActivity{
         unregisterReceiver(getMessageReceiver);
     }
 
-//    @Override
-//    protected void onDestroy() {
-//        super.onDestroy();
-//        unregisterReceiver(getMessageReceiver);
-//    }
-
+    /**
+     * 接收消息的广播接收器
+     */
     class GetMessageReceiver extends BroadcastReceiver{
         @Override
         public void onReceive(Context context, Intent intent) {
             MyMessage message = (MyMessage) intent.getSerializableExtra("message");
             messageId = message.getMessageId();
- //           Log.d("触发广播的ID ",String.valueOf(messageId));
             if(message.getMessageId() == messageId) {
 
                 int type;

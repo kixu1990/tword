@@ -1,17 +1,32 @@
 package com.example.tword;
 
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Message;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
+
+import com.example.tword.service.NetwordCheckService;
 
 import org.litepal.crud.DataSupport;
 
@@ -22,6 +37,7 @@ import litepal.SatffDB;
 import litepal.departmentDB;
 import materialdesignutil.StatusBarUtil;
 import message.MyMessage;
+import mutils.DoubleClickUtil;
 import nio.NioSocketChannel;
 
 public class LoginActivity extends BaseActivity {
@@ -31,7 +47,8 @@ public class LoginActivity extends BaseActivity {
     private EditText loginName,password;
     private TextView loginButton;
     private GetLoginReceiver loginReceiver;
-
+    private CardView loginCardView;
+    private ImageView loginLandian,loginLandian2,loginLandain3;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,6 +63,13 @@ public class LoginActivity extends BaseActivity {
 
         loginName = (EditText)findViewById(R.id.loginName_et);
         loginButton = (TextView)findViewById(R.id.login_tv);
+        loginCardView = (CardView)findViewById(R.id.login_cardview);
+        loginLandian = (ImageView)findViewById(R.id.login_landian_iv);
+        loginLandian2 = (ImageView)findViewById(R.id.login_landian_iv2);
+        loginLandain3 = (ImageView)findViewById(R.id.login_landian_iv3);
+        loginLandian.setVisibility(View.GONE);
+        loginLandian2.setVisibility(View.GONE);
+        loginLandain3.setVisibility(View.GONE);
         password = (EditText)findViewById(R.id.password_et);
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction("com.example.tword.LOGIN_BROADCAST");
@@ -74,6 +98,9 @@ public class LoginActivity extends BaseActivity {
             public void onClick(View view) {
 //                  new NioSocketClient().start(loginName.getText().toString(),password.getText().toString());
  //               User.login(loginName.getText().toString(),password.getText().toString());
+                if(DoubleClickUtil.isDoubleClick(1000)){
+                    return;
+                }
            if(loginName.getText().toString().equals("deleteDB")) {
                DataSupport.deleteAll(MainMessageDB.class);
                DataSupport.deleteAll(MessageContentDB.class);
@@ -87,12 +114,42 @@ public class LoginActivity extends BaseActivity {
                        if (NioSocketChannel.getInstance().login(loginName.getText().toString(), password.getText().toString())) {
                            stopGetMessageService();
                            startGetMessageService();
+                       }else {
+                           //子线程更新UI的方法 使用Hander
+                           Message msg = new Message();
+                           msg.what = 0;
+                           msg.obj = false;
+                           mHander.sendMessage(msg);
                        }
                    }
                }).start();
            }
+           loginCardView.setVisibility(View.GONE);
+           loginLandian.setVisibility(View.VISIBLE);
+           loginLandian2.setVisibility(View.VISIBLE);
+           loginLandain3.setVisibility(View.VISIBLE);
+                DisplayMetrics metrics = new DisplayMetrics();
+                getWindowManager().getDefaultDisplay().getMetrics(metrics);
+                int width = metrics.widthPixels;
+                ObjectAnimator animator = ObjectAnimator.ofFloat(loginLandian,"translationX",-width,0,0,width-400);
+                animator.setDuration(2000);
+                animator.setRepeatCount(50);
+                animator.start();
+                ObjectAnimator animator2 = ObjectAnimator.ofFloat(loginLandian2,"translationX",-width+200,0,0,width-200);
+                animator2.setDuration(2000);
+                animator2.setRepeatCount(50);
+                animator2.start();
+                ObjectAnimator animator3 = ObjectAnimator.ofFloat(loginLandain3,"translationX",-width+400,0,0,width);
+                animator3.setDuration(2000);
+                animator3.setRepeatCount(50);
+                animator3.start();
             }
         });
+    }
+
+    private void startNetwordCheckService(){
+        Intent startIntent = new Intent(this, NetwordCheckService.class);
+        startService(startIntent);
     }
 
     private void stopGetMessageService(){
@@ -118,6 +175,33 @@ public class LoginActivity extends BaseActivity {
         this.finish();
     }
 
+    /**
+     * 登录失败调用方法
+     */
+    private void loginFails(){
+        loginCardView.setVisibility(View.VISIBLE);
+        loginLandian.setVisibility(View.GONE);
+        loginLandian2.setVisibility(View.GONE);
+        loginLandain3.setVisibility(View.GONE);
+        toast();
+    }
+
+    /**
+     * 子线程更新UI
+     */
+    Handler mHander = new Handler(){
+        @Override
+        public void handleMessage(@NonNull Message msg) {
+            super.handleMessage(msg);
+            switch (msg.what){
+                case 0: loginFails();
+                        break;
+                default:
+                        break;
+            }
+        }
+    };
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -142,9 +226,7 @@ public class LoginActivity extends BaseActivity {
                   User.getINSTANCE().setLoginName(loginName.getText().toString());
                   User.getINSTANCE().setPasswrd(password.getText().toString());
 
-//                  startHeartbeatService();
-
-//                  Log.d("用户名 ：" + User.getINSTANCE().getUserName(), "  ID ：" + User.getINSTANCE().getUserId());
+                  startNetwordCheckService();
 
                   Intent it = new Intent(LoginActivity.this, TWordMainActivity.class);
                   it.putExtra("message",message);
@@ -158,6 +240,10 @@ public class LoginActivity extends BaseActivity {
 //                  } catch (IOException e) {
 //                      e.printStackTrace();
 //                  }
+                  loginCardView.setVisibility(View.VISIBLE);
+                  loginLandian.setVisibility(View.GONE);
+                  loginLandian2.setVisibility(View.GONE);
+                  loginLandain3.setVisibility(View.GONE);
                   toast();
              }
         }

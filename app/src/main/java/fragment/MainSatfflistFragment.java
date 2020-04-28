@@ -10,6 +10,7 @@ import android.widget.BaseExpandableListAdapter;
 import android.widget.ExpandableListView;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
@@ -29,13 +30,14 @@ import litepal.departmentDB;
 
 /**
  * Created by kixu on 2019/10/24.
+ * 主页通迅录类
  */
 
 public class MainSatfflistFragment extends Fragment {
 
     ExpandableListView satfflist;
-    String[] groupData;
-    int[][] childData;
+    String[] groupData;                  //部门数据
+    int[][] childData;                   //人员数据
     HashMap<Integer,String> userNameMap;
     HashMap<Integer,byte[]> userImageMap;
     HashMap<Integer,String> userPostMap, userPoneNumberMap,userEmailMap,userStateMap;
@@ -47,12 +49,16 @@ public class MainSatfflistFragment extends Fragment {
 
         satfflist = (ExpandableListView) view.findViewById(R.id.stafflist_expandablelistview);
 
+        return view;
+    }
+
+    private void dataInit(){
         List<departmentDB> departmentDBs = DataSupport.select("*")
-                                                      .where("userId = ?",String.valueOf(User.getINSTANCE().getUserId()))
-                                                      .find(departmentDB.class);
+                .where("userId = ?",String.valueOf(User.getINSTANCE().getUserId()))
+                .find(departmentDB.class);
         List<SatffDB> satffDBS = DataSupport.select("*")
-                                            .where("userId = ?",String.valueOf(User.getINSTANCE().getUserId()))
-                                            .find(SatffDB.class);
+                .where("userId = ?",String.valueOf(User.getINSTANCE().getUserId()))
+                .find(SatffDB.class);
         userImageMap = new HashMap<>();
         userNameMap = new HashMap<>();
         userPostMap =new HashMap<>();
@@ -95,8 +101,12 @@ public class MainSatfflistFragment extends Fragment {
 
         ExAdapter adapter = new ExAdapter(groupData,childData,this.getContext());
         satfflist.setAdapter(adapter);
+    }
 
-        return view;
+    @Override
+    public void onResume() {
+        super.onResume();
+        dataInit();
     }
 
     class ExAdapter extends BaseExpandableListAdapter{

@@ -42,10 +42,11 @@ import litepal.SatffDB;
 import litepal.departmentDB;
 import materialdesignutil.StatusBarUtil;
 import message.MyMessage;
+import mutils.DoubleClickUtil;
 import nio.NioSocketChannel;
 
 
-public class AddMessage extends BaseActivity {
+public class   AddMessage extends BaseActivity {
     private String[] problem = new String[]{"漏针","杂毛","爆洞","长短袖","油污","杂毛","爆洞","长短袖","油污","杂毛","爆洞","长短袖","油污"};
     private String[] report = new String[]{"上报问题","工作交接","询问"};
     private String[] groupData; //= new String[]{"织机部","生产部","营业部","办房"};
@@ -294,6 +295,10 @@ public class AddMessage extends BaseActivity {
         createMessageButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+
+                if(DoubleClickUtil.isDoubleClick(1000)){
+                    return;
+                }
 
                 ArrayList<Integer> userId = adapter.getCheckChild();
                 int[] receivers = new int[userId.size()];

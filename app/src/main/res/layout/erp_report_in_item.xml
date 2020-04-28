@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#fff">
+    <!-- 批号-->
+    <TextView
+        android:id="@+id/rep_lotnumber_tv"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginTop="2dp"
+        android:gravity="center"/>
+    <!-- 总数-->
+    <TextView
+        android:id="@+id/rep_total_tv"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center"/>
+    <!-- 今日完成数-->
+    <TextView
+        android:id="@+id/rep_todayproduction_tv"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center"/>
+    <!-- 总完成数-->
+    <TextView
+        android:id="@+id/rep_production_tv"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center"/>
+    <!-- 未完成数-->
+    <TextView
+        android:id="@+id/rep_notproduction_tv"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center"/>
+    <!-- 进度-->
+    <TextView
+        android:id="@+id/rep_progress_tv"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center"/>
+
+</LinearLayout>

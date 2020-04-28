@@ -1,10 +1,7 @@
 package litepal;
 
-import com.example.tword.User;
-
 import org.litepal.crud.DataSupport;
 
-import java.util.ArrayList;
 import java.util.Date;
 
 /**
@@ -12,10 +9,19 @@ import java.util.Date;
  */
 
 public class MainMessageDB extends DataSupport {
-    private int userId;
-    private long messageId;
-    private String headlin;
-    private Date date;
+    private byte[] image;   //显示图片
+    private int userId;     //使用者ID
+    private long messageId; //消息ID
+    private String headlin; //消息标题
+    private Date date;      //最后消息日期
+
+    public byte[] getImage() {
+        return image;
+    }
+
+    public void setImage(byte[] image) {
+        this.image = image;
+    }
 
     public Date getDate() {
         return date;

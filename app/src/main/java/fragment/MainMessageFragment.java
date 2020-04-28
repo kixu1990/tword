@@ -5,10 +5,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -53,43 +55,18 @@ public class MainMessageFragment extends Fragment {
 
         recyclerView.setLayoutManager(layoutManager);
         mainMessages.clear();
-        String userId = String.valueOf( User.getINSTANCE().getUserId());
-        List<MainMessageDB> mainMessageDBs = DataSupport.select("*")
-                                                        .where("userId = ?",userId)
-                                                        .find(MainMessageDB.class);
-//        List<MainMessageDB> mainMessageDBs = DataSupport.findAll(MainMessageDB.class);
-//        Log.d("启动","MainMessageFragment");
 
-        for(MainMessageDB mm:mainMessageDBs){
-            MainMessage mainMessage = new MainMessage(mm.getHeadlin());
-            mainMessage.setMessageId(mm.getMessageId());
-            String msgId = String.valueOf(mm.getMessageId());
-            List<MessageContentDB> contents = DataSupport.select("*")
-                                                         .where("userId = ? and msgId =?",userId,msgId)
-                                                         .find(MessageContentDB.class);
-            String lastContent = "";
-            java.util.Date lastTime = null;
-            if(contents.size() > 0){
-                lastContent = contents.get(contents.size() -1).getStringContent();
-                lastTime = new java.util.Date(contents.get(contents.size() - 1).getSenderTime());
-//                if(lastTime == null){
-//                    Log.d("lastTime","null");
-//                }else {
-//                    Log.d("lastTime","11111111");
-//                }
-//                Log.d("000000",contents.get(contents.size() - 1).getSenderTime().toString());
-            }else {
-                lastTime = mm.getDate();
-            }
-
-            mainMessage.setLastContent(lastContent);
-            mainMessage.setLastTime(lastTime);
-//            Log.d("DB里的mainMessage",mm.getHeadlin()+": "+mm.getUserId());
-            mainMessages.add(mainMessage);
+        //防止活动被回收后的数据丢失
+        if(savedInstanceState != null){
+            mainMessages = savedInstanceState.getParcelableArrayList("mainMessages");
+        }else {
+            mainMessagesInit();
         }
+
         adapter = new MainMessageAdapter(mainMessages);
         recyclerView.setAdapter(adapter);
 
+        //开启两个广播接收器-------------------------------------------------------------------------
         intentFilter = new IntentFilter();
         intentFilter.addAction("com.example.tword.GETMAINMESSAGE_BROADCAST");
         getMainMessageReceiver = new GetMainMessageReceiver();
@@ -99,31 +76,79 @@ public class MainMessageFragment extends Fragment {
         contentFilter.addAction("com.example.tword.GETCONTENT_BROADCAST");
         getContentReceiver = new GetContentReceiver();
         view.getContext().registerReceiver(getContentReceiver,contentFilter);
+        //-------------------------------------------------------------------------------------------
 
         return view;
+    }
+
+    /**
+     * 初始化数据
+     */
+    private void mainMessagesInit(){
+        String userId = String.valueOf( User.getINSTANCE().getUserId());
+        List<MainMessageDB> mainMessageDBs = DataSupport.select("*")
+                .where("userId = ?",userId)
+                .find(MainMessageDB.class);
+
+        for(MainMessageDB mm:mainMessageDBs){
+            MainMessage mainMessage = new MainMessage(mm.getHeadlin());
+            mainMessage.setMessageId(mm.getMessageId());
+            String msgId = String.valueOf(mm.getMessageId());
+            List<MessageContentDB> contents = DataSupport.select("*")
+                    .where("userId = ? and msgId =?",userId,msgId)
+                    .find(MessageContentDB.class);
+            String lastContent = "";
+            java.util.Date lastTime = null;
+            if(contents.size() > 0){
+                lastContent = contents.get(contents.size() -1).getStringContent();
+                lastTime = new java.util.Date(contents.get(contents.size() - 1).getSenderTime());
+            }else {
+                lastTime = mm.getDate();
+            }
+            mainMessage.setImage(mm.getImage());
+            mainMessage.setLastContent(lastContent);
+            mainMessage.setLastTime(lastTime);
+            mainMessages.add(mainMessage);
+        }
+    }
+
+    /**
+     * 保存数据 防止手机后台重启活动
+     * @param outState
+     */
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putParcelableArrayList("mainMessages", (ArrayList<? extends Parcelable>) mainMessages);
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        getActivity().unregisterReceiver(getMainMessageReceiver);
+        getActivity().unregisterReceiver(getMainMessageReceiver); //关闭广播接收器
+        getActivity().unregisterReceiver(getContentReceiver);     //半闭广播接收器
     }
 
+    /**
+     * 接收创建消息的广播接收器内部类
+     */
     class  GetMainMessageReceiver extends BroadcastReceiver{
-
         @Override
         public void onReceive(Context context, Intent intent) {
             MyMessage message = (MyMessage) intent.getSerializableExtra("createMessage");
             MainMessage mm = new MainMessage(message.getStringContent());
+            mm.setImage((byte[])message.getObjects()[0]);
             mm.setMessageId(message.getMessageId());
             mm.setLastTime(new java.util.Date(message.getDate().getTime()));
             mainMessages.add(mm);
- //           Log.d("主页得到消息",mm.getHeadlin());
             adapter.notifyItemInserted(mainMessages.size() -1);
             recyclerView.scrollToPosition(mainMessages.size() -1);
         }
     }
 
+    /**
+     * 接收消息内容的广播接收器内部类
+     */
     class  GetContentReceiver extends  BroadcastReceiver{
         @Override
         public void onReceive(Context context, Intent intent) {

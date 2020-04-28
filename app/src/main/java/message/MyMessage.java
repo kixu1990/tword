@@ -9,17 +9,17 @@ import java.sql.Date;
  */
 
 public class MyMessage implements Serializable{
-    private int sender;
-    private int[] receivers;
-    private String stringContent;
-    private String header;
-    private String loginName = "";
-    private String loginPassword = "";
-    private String userName = "";
-    private String messageLable = "";
-    private long messageId = 0;
-    private Object[] objects;
-    private Date date;
+    private int sender;                   //发送者
+    private int[] receivers;              //接收者
+    private String stringContent;         //文本内容
+    private String header;                //标头
+    private String loginName = "";        //登录名
+    private String loginPassword = "";    //登录密码
+    private String userName = "";         //用户名
+    private String messageLable = "";     //标签
+    private long messageId = 0;           //消息ID
+    private Object[] objects;             //附带内容
+    private Date date;                    //接收时间
 
     public MyMessage(int sender,int[] receivers,String header){
         this.sender = sender;
